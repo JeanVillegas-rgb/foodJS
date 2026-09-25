@@ -178,7 +178,7 @@ export default function Profile() {
                 )}
               </div>
               <div>
-                <h2>{profile.firstName + " " + profile.lastName || "Customer"}</h2>
+                <h2>{`${profile.firstName} ${profile.lastName}`.trim() || "Customer"}</h2>
                 <p>{profile.email}</p>
               </div>
             </div>

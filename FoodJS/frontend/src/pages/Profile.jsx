@@ -21,6 +21,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
+  const [coupons, setCoupons] = useState([]);
+  const [couponsLoading, setCouponsLoading] = useState(true);
 
   const initials = useMemo(() => {
     const first = profile.firstName?.trim()?.[0] || "";
@@ -69,6 +71,28 @@ export default function Profile() {
 
     loadProfile();
   }, [navigate, errorNotif]);
+
+  useEffect(() => {
+    const loadCoupons = async () => {
+      try {
+        const response = await fetch("/api/coupons");
+        if (!response.ok) {
+          errorNotif("Unable to load available coupons.");
+          return;
+        }
+
+        const data = await response.json();
+        setCoupons(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load coupons:", err);
+        errorNotif("Unable to load available coupons right now.");
+      } finally {
+        setCouponsLoading(false);
+      }
+    };
+
+    loadCoupons();
+  }, [errorNotif]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -284,6 +308,55 @@ export default function Profile() {
                 ))}
               </ul>
             )}
+
+            <div className="profile-coupons">
+            <div>
+              <h3>Available Coupons</h3>
+              <p className="muted-text">Save on your next order with these offers.</p>
+            </div>
+            {couponsLoading ? (
+              <p className="muted-text">Loading coupons...</p>
+            ) : coupons.filter((coupon) => {
+              const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+              const isExhausted =
+                coupon.maxUses !== -1 &&
+                coupon.maxUses !== undefined &&
+                coupon.usedCount >= coupon.maxUses;
+              return !isExpired && !isExhausted;
+            }).length === 0 ? (
+              <p className="muted-text">No coupons are available right now.</p>
+            ) : (
+              <ul className="profile-coupon-list">
+                {coupons
+                  .filter((coupon) => {
+                    const isExpired =
+                      coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                    const isExhausted =
+                      coupon.maxUses !== -1 &&
+                      coupon.maxUses !== undefined &&
+                      coupon.usedCount >= coupon.maxUses;
+                    return !isExpired && !isExhausted;
+                  })
+                  .map((coupon) => (
+                    <li key={coupon.id} className="profile-coupon-item">
+                      <div className="profile-coupon-code">{coupon.code}</div>
+                      <strong>
+                        {coupon.discountType === "percentage"
+                          ? `${coupon.discount}% off`
+                          : `₹${coupon.discount} off`}
+                      </strong>
+                      <p>{coupon.description}</p>
+                      <span>
+                        Min. order: ₹{coupon.minOrderAmount || 0}
+                        {coupon.expiryDate
+                          ? ` · Expires ${new Date(coupon.expiryDate).toLocaleDateString()}`
+                          : ""}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+            </div>
           </aside>
         </div>
       </div>

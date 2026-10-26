@@ -6,28 +6,54 @@ const EMPTY_COUPON = {
   discountType: "percentage",
   minOrderAmount: "",
   maxUses: "",
+  expiryDate: "",
 };
 
 export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon, onDeleteCoupon }) {
   const [form, setForm] = useState(EMPTY_COUPON);
   const [editId, setEditId] = useState(null);
+  const [formError, setFormError] = useState("");
 
   const reset = () => {
     setForm(EMPTY_COUPON);
     setEditId(null);
+    setFormError("");
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.code || !form.discount) return;
+    const discount = Number(form.discount);
+    const minOrderAmount = Number(form.minOrderAmount || 0);
+    const maxUses = form.maxUses === "" ? -1 : Number(form.maxUses);
+
+    if (!form.code.trim() || !Number.isFinite(discount) || discount <= 0) {
+      setFormError("Enter a coupon code and a discount greater than zero.");
+      return;
+    }
+
+    if (form.discountType === "percentage" && discount > 100) {
+      setFormError("Percentage discounts cannot be greater than 100.");
+      return;
+    }
+
+    if (!Number.isFinite(minOrderAmount) || minOrderAmount < 0) {
+      setFormError("Minimum order amount cannot be negative.");
+      return;
+    }
+
+    if (!Number.isInteger(maxUses) || maxUses < -1) {
+      setFormError("Maximum uses must be -1 or a whole number of zero or more.");
+      return;
+    }
 
     const payload = {
       code: form.code.toUpperCase(),
-      discount: parseFloat(form.discount),
+      discount,
       discountType: form.discountType,
-      minOrderAmount: parseFloat(form.minOrderAmount) || 0,
-      maxUses: form.maxUses === "" ? -1 : parseInt(form.maxUses),
-      description: `${form.discountType === "percentage" ? form.discount + "%" : "₹" + form.discount} off`,
+      minOrderAmount,
+      maxUses,
+      expiryDate: form.expiryDate || undefined,
+      description: `${form.discountType === "percentage" ? discount + "%" : "₹" + discount} off`,
     };
 
     if (editId) {
@@ -46,7 +72,9 @@ export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon,
       discountType: coupon.discountType,
       minOrderAmount: coupon.minOrderAmount,
       maxUses: coupon.maxUses,
+      expiryDate: coupon.expiryDate || "",
     });
+    setFormError("");
   };
 
   return (
@@ -96,6 +124,15 @@ export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon,
           min="-1"
         />
 
+        <label className="admin-form-field">
+          <span>Expiry date (optional)</span>
+          <input
+            type="date"
+            value={form.expiryDate}
+            onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+          />
+        </label>
+
         <div className="admin-form-actions">
           <button type="submit" className="admin-btn admin-btn-primary">
             {editId ? "Update Coupon" : "Add Coupon"}
@@ -107,6 +144,7 @@ export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon,
           )}
         </div>
       </form>
+      {formError && <p className="admin-form-error">{formError}</p>}
 
       <ul className="admin-category-list">
         {coupons.map((coupon) => (

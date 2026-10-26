@@ -28,8 +28,25 @@ router.post('/validate', (req, res) => {
 router.post('/', verifyToken, requireAdmin, (req, res) => {
   const { code, discount, discountType, minOrderAmount, expiryDate, maxUses, description } = req.body;
 
-  if (!code || !discount || !discountType) {
+  if (
+    !code ||
+    !Number.isFinite(Number(discount)) ||
+    Number(discount) <= 0 ||
+    !['percentage', 'fixed'].includes(discountType)
+  ) {
     return res.status(400).json({ message: 'Code, discount, and discountType required' });
+  }
+
+  if (discountType === 'percentage' && Number(discount) > 100) {
+    return res.status(400).json({ message: 'Percentage discount cannot exceed 100' });
+  }
+
+  if (minOrderAmount !== undefined && (!Number.isFinite(Number(minOrderAmount)) || Number(minOrderAmount) < 0)) {
+    return res.status(400).json({ message: 'Minimum order amount must be zero or greater' });
+  }
+
+  if (maxUses !== undefined && (!Number.isInteger(Number(maxUses)) || Number(maxUses) < -1)) {
+    return res.status(400).json({ message: 'Maximum uses must be -1 or a whole number of zero or more' });
   }
 
   const data = readJsonFromData('coupons.json');
@@ -63,7 +80,7 @@ router.post('/', verifyToken, requireAdmin, (req, res) => {
 // PUT - Update coupon para admin only
 router.put('/:id', verifyToken, requireAdmin, (req, res) => {
   const { id } = req.params;
-  const { code, discount, discountType, minOrderAmount, maxUses, description } = req.body;
+  const { code, discount, discountType, minOrderAmount, expiryDate, maxUses, description } = req.body;
 
   if (!code || !discount || !discountType) {
     return res.status(400).json({ message: 'Code, discount, and discountType required' });
@@ -82,6 +99,7 @@ router.put('/:id', verifyToken, requireAdmin, (req, res) => {
     discount: discount,
     discountType: discountType,
     minOrderAmount: minOrderAmount || 0,
+    expiryDate: expiryDate || data.coupons[couponIndex].expiryDate || '2026-12-31',
     maxUses: maxUses !== undefined ? maxUses : -1,
     description: description || '',
   };

@@ -339,6 +339,12 @@
   resize: vertical;
 }
 
+.admin-form-error {
+  color: #b42318;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
 .admin-order-filters input:focus,
 .admin-order-filters select:focus,
 .admin-form-grid input:focus,

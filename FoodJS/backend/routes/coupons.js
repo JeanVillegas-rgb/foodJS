@@ -82,8 +82,25 @@ router.put('/:id', verifyToken, requireAdmin, (req, res) => {
   const { id } = req.params;
   const { code, discount, discountType, minOrderAmount, expiryDate, maxUses, description } = req.body;
 
-  if (!code || !discount || !discountType) {
+  if (
+    !code ||
+    !Number.isFinite(Number(discount)) ||
+    Number(discount) <= 0 ||
+    !['percentage', 'fixed'].includes(discountType)
+  ) {
     return res.status(400).json({ message: 'Code, discount, and discountType required' });
+  }
+
+  if (discountType === 'percentage' && Number(discount) > 100) {
+    return res.status(400).json({ message: 'Percentage discount cannot exceed 100' });
+  }
+
+  if (minOrderAmount !== undefined && (!Number.isFinite(Number(minOrderAmount)) || Number(minOrderAmount) < 0)) {
+    return res.status(400).json({ message: 'Minimum order amount must be zero or greater' });
+  }
+
+  if (maxUses !== undefined && (!Number.isInteger(Number(maxUses)) || Number(maxUses) < -1)) {
+    return res.status(400).json({ message: 'Maximum uses must be -1 or a whole number of zero or more' });
   }
 
   const data = readJsonFromData('coupons.json');
@@ -93,13 +110,19 @@ router.put('/:id', verifyToken, requireAdmin, (req, res) => {
     return res.status(404).json({ message: 'Coupon not found' });
   }
 
+  if (data.coupons.some((coupon, index) =>
+    index !== couponIndex && coupon.code.toUpperCase() === code.toUpperCase()
+  )) {
+    return res.status(400).json({ message: 'Coupon code already exists' });
+  }
+
   data.coupons[couponIndex] = {
     ...data.coupons[couponIndex],
     code: code.toUpperCase(),
     discount: discount,
     discountType: discountType,
     minOrderAmount: minOrderAmount || 0,
-    expiryDate: expiryDate || data.coupons[couponIndex].expiryDate || '2026-12-31',
+    expiryDate: expiryDate || null,
     maxUses: maxUses !== undefined ? maxUses : -1,
     description: description || '',
   };

@@ -22,6 +22,7 @@ export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon,
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError("");
     const discount = Number(form.discount);
     const minOrderAmount = Number(form.minOrderAmount || 0);
     const maxUses = form.maxUses === "" ? -1 : Number(form.maxUses);
@@ -52,7 +53,7 @@ export default function CouponManagement({ coupons, onAddCoupon, onUpdateCoupon,
       discountType: form.discountType,
       minOrderAmount,
       maxUses,
-      expiryDate: form.expiryDate || undefined,
+      expiryDate: form.expiryDate || null,
       description: `${form.discountType === "percentage" ? discount + "%" : "₹" + discount} off`,
     };
 
